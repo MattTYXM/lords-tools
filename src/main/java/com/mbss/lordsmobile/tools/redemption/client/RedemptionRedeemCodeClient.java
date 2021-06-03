@@ -3,6 +3,7 @@ package com.mbss.lordsmobile.tools.redemption.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.mbss.lordsmobile.tools.redemption.model.RedemptionRedeemCodeRequest;
+import com.mbss.lordsmobile.tools.redemption.model.RedemptionRedeemCodeResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -13,7 +14,7 @@ import java.util.Map;
 import static com.mbss.lordsmobile.tools.Constants.LANGUAGE;
 
 @Component
-public class RedemptionRedeemCodeClient extends RedemptionClient<RedemptionRedeemCodeRequest, Boolean> {
+public class RedemptionRedeemCodeClient extends RedemptionClient<RedemptionRedeemCodeRequest, RedemptionRedeemCodeResponse> {
 
     private static final String AC = "get_gifts";
 
@@ -49,7 +50,10 @@ public class RedemptionRedeemCodeClient extends RedemptionClient<RedemptionRedee
     }
 
     @Override
-    protected Boolean getResponse(final ClientResponse clientResponse) {
-        return clientResponse.getSuccess() == 1;
+    protected RedemptionRedeemCodeResponse getResponse(final ClientResponse clientResponse) {
+        return RedemptionRedeemCodeResponse.builder()
+                .withSuccess(clientResponse.getSuccess() == 1)
+                .withMessage(clientResponse.getMessage())
+                .build();
     }
 }

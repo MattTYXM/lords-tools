@@ -3,6 +3,7 @@ package com.mbss.lordsmobile.tools.redemption.service;
 import com.mbss.lordsmobile.tools.redemption.client.RedemptionRedeemCodeClient;
 import com.mbss.lordsmobile.tools.redemption.client.RedemptionUserInfoClient;
 import com.mbss.lordsmobile.tools.redemption.model.RedemptionRedeemCodeRequest;
+import com.mbss.lordsmobile.tools.redemption.model.RedemptionRedeemCodeResponse;
 import com.mbss.lordsmobile.tools.redemption.model.RedemptionUserInfoRequest;
 import com.mbss.lordsmobile.tools.redemption.model.RedemptionUserInfoResponse;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class RedemptionService {
         return redemptionUserInfoClient.doRequest(redemptionUserInfoRequest);
     }
 
-    public boolean redeemCode(
+    public RedemptionRedeemCodeResponse redeemCode(
             final RedemptionRedeemCodeRequest redemptionRedeemCodeRequest
     ) {
         return redemptionRedeemCodeClient.doRequest(redemptionRedeemCodeRequest);
