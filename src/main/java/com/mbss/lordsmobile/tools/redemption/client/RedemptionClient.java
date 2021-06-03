@@ -1,92 +1,60 @@
 package com.mbss.lordsmobile.tools.redemption.client;
 
-import com.mbss.lordsmobile.tools.redemption.client.model.RedemptionClientRequest;
-import com.mbss.lordsmobile.tools.redemption.client.model.RedemptionClientResponse;
-import com.mbss.lordsmobile.tools.redemption.model.RedemptionRequest;
-import com.mbss.lordsmobile.tools.redemption.model.RedemptionResponse;
-import lombok.NonNull;
-import org.springframework.http.*;
-import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mbss.lordsmobile.tools.client.AbstractClient;
+import lombok.Value;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+public abstract class RedemptionClient<REQUEST, RESPONSE> extends AbstractClient<MultiValueMap<String, String>, REQUEST, RESPONSE> {
 
-import static com.mbss.lordsmobile.tools.Constants.GAME_ID;
-import static com.mbss.lordsmobile.tools.Constants.LANGUAGE;
-import static java.lang.Integer.parseInt;
-import static java.util.Collections.singletonMap;
-import static org.springframework.http.HttpMethod.POST;
+    private static final String REDEMPTION_PATH = "/project/gifts/ajax.php";
 
-@Component
-public class RedemptionClient {
-
-    private static final Pattern REDEMPTION_CLIENT_RESPONSE_MESSAGE_PATTERN = Pattern.compile(
-        "(Kingdom:[\\s\\S]#)(?<kingdom>800)(<br>)(Might:[\\s\\S])(?<might>[0-9,]*)");
-
-    private static final String PROJECT_GIFTS_PATH = "/project/gifts/ajax.php";
-
-    private static final String AC_GET_EXTRA_INFO = "get_extra_info";
-
-    private final RestTemplate restTemplate;
-
-    public RedemptionClient(final RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    protected RedemptionClient(
+            final RestTemplate restTemplate,
+            final ObjectMapper objectMapper
+    ) {
+        super(restTemplate, objectMapper);
     }
 
-    public RedemptionResponse redeem(final RedemptionRequest redemptionRequest) {
-        final RedemptionClientRequest body = map(redemptionRequest);
-
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        final HttpEntity<RedemptionClientRequest> httpEntity = new HttpEntity<>(body, headers);
-
-        final ResponseEntity<RedemptionClientResponse> responseEntity = restTemplate.exchange(
-            PROJECT_GIFTS_PATH,
-            POST,
-            httpEntity,
-            RedemptionClientResponse.class,
-            singletonMap("game_id", GAME_ID)
-        );
-
-        if (!responseEntity.getStatusCode().is2xxSuccessful()) {
-            throw new IllegalStateException("unsuccessful status: " + responseEntity.getStatusCode());
-        }
-
-        final RedemptionClientResponse redemptionClientResponse = responseEntity.getBody();
-
-        if (redemptionClientResponse.getSuccess() != 1) {
-            throw new IllegalStateException("unacceptable success value: " + redemptionClientResponse.getSuccess());
-        }
-
-        return map(redemptionClientResponse);
+    @Override
+    protected final String getPath() {
+        return REDEMPTION_PATH;
     }
 
-    static RedemptionClientRequest map(final RedemptionRequest source) {
-        return RedemptionClientRequest.builder()
-            .withAc(AC_GET_EXTRA_INFO)
-            .withCharname(source.getPlayerName())
-            .withLang(LANGUAGE)
-            .build();
-    }
-
-    static RedemptionResponse map(@NonNull final RedemptionClientResponse source) {
-        final Matcher matcher = REDEMPTION_CLIENT_RESPONSE_MESSAGE_PATTERN.matcher(source.getMessage());
-
-        if (!matcher.matches()) {
-            throw new IllegalStateException("RedemptionClientResponse response in unexpected format");
+    @Override
+    protected final RESPONSE getResponse(final String responseBodyString) {
+        final ClientResponse clientResponse;
+        try {
+            clientResponse = objectMapper.readValue(
+                    responseBodyString,
+                    ClientResponse.class
+            );
+        } catch (final JsonProcessingException e) {
+            throw new IllegalStateException("malformed response: " + responseBodyString);
         }
 
-        final String kingdomString = matcher.group("kingdom");
-        final int kingdom = parseInt(kingdomString);
+        return getResponse(clientResponse);
+    }
 
-        final String mightString = matcher.group("might").replaceAll(",", "");
-        final int might = parseInt(mightString);
+    protected abstract RESPONSE getResponse(final ClientResponse clientResponse);
 
-        return RedemptionResponse.builder()
-            .withKingdom(kingdom)
-            .withMight(might)
-            .build();
+    @Value
+    protected static class ClientResponse {
+
+        String message;
+        int success;
+
+        @JsonCreator
+        public ClientResponse(
+                @JsonProperty("msg") final String message,
+                @JsonProperty("succ") final int success
+        ) {
+            this.message = message;
+            this.success = success;
+        }
     }
 }

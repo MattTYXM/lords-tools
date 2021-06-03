@@ -5,6 +5,8 @@ import lombok.Value;
 
 @Value
 @Builder(setterPrefix = "with")
-public class RedemptionRequest {
-    String playerName;
+public class RedemptionUserInfoResponse {
+
+    int kingdom;
+    int might;
 }
